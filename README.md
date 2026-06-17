@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cờ Cá Ngựa: Kỷ Nguyên Điện Trường</title>
+    
+    <!-- Tailwind CSS (Dùng cho bố cục ngoài) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #050814;
+            color: #f8fafc;
+        }
+
+        .font-scifi { font-family: 'Orbitron', sans-serif; }
+
+        /* Lưới nền phòng thí nghiệm */
+        .bg-grid {
+            background-image: 
+                linear-gradient(rgba(34, 211, 238, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(34, 211, 238, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        @keyframes scale-in { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .animate-scale-in { animation: scale-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        /* Vòng sáng quanh quân cờ đang đến lượt */
+        @keyframes pulse-ring {
+            0% { transform: translate(-50%, -50%) scale(0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+            70% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }
+            100% { transform: translate(-50%, -50%) scale(0.8); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+        
+        /* Hiệu ứng xúc xắc lượng tử */
+        .dice-spin { animation: spin 0.15s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg) scale(1.1); filter: hue-rotate(90deg); } }
+
+        /* Nút bấm viễn tưởng */
+        .btn-scifi { position: relative; overflow: hidden; transition: all 0.3s; }
+        .btn-scifi::before {
+            content: ''; position: absolute; top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: all 0.5s;
+        }
+        .btn-scifi:hover::before { left: 100%; }
+        .btn-scifi:active { transform: scale(0.95); }
+
+        /* Kính mờ (Glassmorphism) */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        /* Tùy chỉnh thanh cuộn */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 4px; }
+
+        /* --- CSS LÕI CHO BÀN CỜ (Không phụ thuộc mạng) --- */
+        .board-cell {
+            border-radius: 50%; background-color: #0f172a; border: 1px solid #334155;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 12px; color: #64748b;
+        }
+        .cell-cyan { border: 2px solid #22d3ee; box-shadow: 0 0 10px rgba(34,211,238,0.5); color: #22d3ee; font-size: 16px; }
+        .cell-rose { border: 2px solid #fb7185; box-shadow: 0 0 10px rgba(244,63,94,0.5); color: #fb7185; font-size: 16px; }
+        .cell-amber { border: 2px solid #fbbf24; box-shadow: 0 0 10px rgba(251,191,36,0.5); color: #fbbf24; font-size: 16px; }
+        .cell-violet { border: 2px solid #a78bfa; box-shadow: 0 0 10px rgba(139,92,246,0.5); color: #a78bfa; font-size: 16px; }
+
+        .home-cyan { background-color: rgba(22, 78, 99, 0.5); border: 1px solid rgba(34, 211, 238, 0.5); color: #67e8f9; border-radius: 4px;}
+        .home-rose { background-color: rgba(136, 19, 55, 0.5); border: 1px solid rgba(251, 113, 133, 0.5); color: #fda4af; border-radius: 4px;}
+        .home-amber { background-color: rgba(120, 53, 15, 0.5); border: 1px solid rgba(251, 191, 36, 0.5); color: #fcd34d; border-radius: 4px;}
+        .home-violet { background-color: rgba(76, 29, 149, 0.5); border: 1px solid rgba(167, 139, 250, 0.5); color: #c4b5fd; border-radius: 4px;}
+
+        .token-piece {
+            position: absolute; width: 6.5%; height: 6.5%; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 20px; border: 2px solid rgba(255,255,255,0.5);
+            transform: translate(-50%, -50%); transition: all 0.3s ease-in-out; z-index: 20;
+        }
+        .token-cyan { background-color: #06b6d4; box-shadow: 0 0 15px rgba(34,211,238,0.8); }
+        .token-rose { background-color: #f43f5e; box-shadow: 0 0 15px rgba(244,63,94,0.8); }
+        .token-amber { background-color: #f59e0b; box-shadow: 0 0 15px rgba(251,191,36,0.8); }
+        .token-violet { background-color: #8b5cf6; box-shadow: 0 0 15px rgba(139,92,246,0.8); }
+
+        .active-player-ring { animation: pulse-ring 1.5s infinite; border: 2px solid white; z-index: 50; }
+    </style>
+</head>
+<body class="bg-grid overflow-hidden min-h-screen">
+
+    <!-- Màn hình khởi động -->
+    <div id="screen-start" class="fixed inset-0 flex flex-col items-center justify-center p-4 z-50 transition-opacity duration-500">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.1),transparent)]"></div>
+        <div class="relative z-10 text-center glass-panel p-12 rounded-3xl border border-cyan-500/30 animate-scale-in max-w-3xl shadow-[0_0_50px_rgba(34,211,238,0.15)]">
+            <i class="fa-solid fa-network-wired text-7xl text-cyan-400 mb-6 drop-shadow-[0_0_15px_rgba(34,211,238,0.8)]"></i>
+            <h1 class="text-5xl md:text-6xl font-scifi text-white mb-2 uppercase tracking-wider">
+                Cờ Cá Ngựa <span class="text-cyan-400">Điện Trường</span>
+            </h1>
+            <p class="text-slate-400 text-xl mb-10 font-light">
+                Mô phỏng Vật lý 11 - Trải nghiệm thi đấu giữa các hạt cơ bản.
+            </p>
+            <button onclick="startGame()" class="btn-scifi px-10 py-4 text-xl font-scifi text-black bg-cyan-400 rounded hover:bg-cyan-300 shadow-[0_0_20px_rgba(34,211,238,0.5)]">
+                <i class="fa-solid fa-power-off mr-2"></i> KHỞI ĐỘNG HỆ THỐNG
+            </button>
+        </div>
+    </div>
+
+    <!-- Màn hình chính -->
+    <div id="screen-game" style="display: none; opacity: 0; transition: opacity 0.5s;" class="min-h-screen flex-col md:flex-row gap-6 p-4 max-w-[1600px] mx-auto">
+        
+        <!-- Cột Trái: Bảng Điều Khiển -->
+        <div class="w-full md:w-[320px] glass-panel rounded-2xl flex flex-col z-10 shadow-2xl p-6 relative overflow-hidden border-t-4 border-t-cyan-500">
+            <div class="mb-8">
+                <h2 class="text-xs font-scifi text-cyan-400 mb-4 tracking-widest uppercase border-b border-slate-700 pb-2">
+                    <i class="fa-solid fa-radar mr-2"></i>Lượt Hoạt Động
+                </h2>
+                <div id="current-turn-box" class="text-xl font-bold p-4 rounded-xl border bg-slate-900/80 flex items-center gap-4 transition-all">
+                    <div id="current-turn-icon" class="w-12 h-12 rounded-full flex items-center justify-center text-white text-2xl transition-all">
+                        <i class="fa-solid fa-atom"></i>
+                    </div>
+                    <span id="current-turn-name">Đang tải...</span>
+                </div>
+            </div>
+            
+            <div class="mb-8 flex flex-col items-center">
+                <h2 class="text-xs font-scifi text-slate-400 mb-4 tracking-widest uppercase w-full border-b border-slate-700 pb-2">Máy Tạo Lượng Tử</h2>
+                <div id="dice-container" class="w-32 h-32 bg-slate-900 rounded-xl border border-slate-700 flex items-center justify-center mb-6 shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] relative">
+                    <div class="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.05)_50%,transparent_75%)] bg-[length:200%_200%] animate-[pulse_2s_linear_infinite]"></div>
+                    <span id="dice-value" class="text-6xl font-scifi z-10 drop-shadow-[0_0_10px_currentColor]">?</span>
+                </div>
+
+                <button id="btn-roll" onclick="rollDice()" class="btn-scifi w-full py-4 rounded font-scifi text-lg transition-all bg-cyan-500 text-black">
+                    KÍCH HOẠT
+                </button>
+            </div>
+
+            <div class="flex-1 flex flex-col min-h-[150px]">
+                <h2 class="text-xs font-scifi text-slate-400 mb-4 tracking-widest uppercase border-b border-slate-700 pb-2">Dữ liệu hệ thống</h2>
+                <div id="log-container" class="flex-1 space-y-2 font-mono text-xs text-slate-400 overflow-y-auto pr-2 custom-scrollbar">
+                    <!-- Logs will go here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột Giữa: Bàn Cờ -->
+        <div class="flex-1 relative flex items-center justify-center p-4">
+            
+            <div id="board-container" class="relative w-full max-w-[700px] aspect-square glass-panel rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-slate-700 overflow-hidden p-2">
+                <!-- 4 Căn Cứ -->
+                <div style="position: absolute; top: 2%; left: 2%; width: 38%; height: 38%;" class="bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,rgba(34,211,238,1),transparent)]"></div>
+                    <i class="fa-solid fa-atom text-[10rem] text-cyan-500 opacity-20 rotate-12"></i>
+                    <div class="absolute top-2 left-3 text-cyan-500 font-scifi tracking-widest text-sm opacity-50">STATION_01</div>
+                </div>
+                <div style="position: absolute; top: 2%; right: 2%; width: 38%; height: 38%;" class="bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,rgba(244,63,94,1),transparent)]"></div>
+                    <i class="fa-solid fa-circle-plus text-[10rem] text-rose-500 opacity-20 -rotate-12"></i>
+                    <div class="absolute top-2 right-3 text-rose-500 font-scifi tracking-widest text-sm opacity-50">STATION_02</div>
+                </div>
+                <div style="position: absolute; bottom: 2%; right: 2%; width: 38%; height: 38%;" class="bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,rgba(251,191,36,1),transparent)]"></div>
+                    <i class="fa-solid fa-sun text-[10rem] text-amber-500 opacity-20 rotate-12"></i>
+                    <div class="absolute bottom-2 right-3 text-amber-500 font-scifi tracking-widest text-sm opacity-50">STATION_03</div>
+                </div>
+                <div style="position: absolute; bottom: 2%; left: 2%; width: 38%; height: 38%;" class="bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,rgba(139,92,246,1),transparent)]"></div>
+                    <i class="fa-solid fa-magnet text-[10rem] text-violet-500 opacity-20 -rotate-12"></i>
+                    <div class="absolute bottom-2 left-3 text-violet-500 font-scifi tracking-widest text-sm opacity-50">STATION_04</div>
+                </div>
+
+                <!-- Tâm Trái Đất (Đích) -->
+                <div style="position: absolute; top: 40%; left: 40%; width: 20%; height: 20%;" class="bg-slate-900 border border-slate-600 rounded flex items-center justify-center shadow-[inset_0_0_20px_rgba(255,255,255,0.1)]">
+                    <i class="fa-solid fa-crosshairs text-4xl text-slate-400 opacity-50 animate-pulse"></i>
+                </div>
+
+                <!-- Lớp chứa ô cờ và quân cờ (Tuyệt đối độc lập) -->
+                <div id="cells-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                <div id="tokens-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
+            </div>
+
+            <!-- Modal Câu Hỏi -->
+            <div id="question-modal" style="display: none;" class="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+                <div class="glass-panel p-8 rounded-2xl border border-cyan-500 max-w-2xl w-full animate-scale-in relative shadow-[0_0_50px_rgba(34,211,238,0.2)] overflow-hidden">
+                    <div id="timer-bar" style="position: absolute; top: 0; left: 0; height: 4px; background-color: #22d3ee; width: 100%; box-shadow: 0 0 10px #22d3ee;"></div>
+                    <div class="flex justify-between items-center mb-6 mt-2">
+                        <div id="modal-mission" class="bg-slate-800 border border-slate-600 text-cyan-400 font-scifi px-4 py-1 rounded text-sm tracking-wide">
+                            NHIỆM VỤ: TIẾN ? Ô
+                        </div>
+                        <div id="modal-timer" class="text-3xl font-scifi text-cyan-400">
+                            20s
+                        </div>
+                    </div>
+                    <h3 id="modal-question-text" class="text-xl md:text-2xl font-bold mb-8 text-white leading-relaxed">Nội dung câu hỏi?</h3>
+                    <div id="modal-options" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Nút đáp án -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột Phải: Tiến trình -->
+        <div class="w-full md:w-[250px] glass-panel rounded-2xl flex flex-col z-10 shadow-2xl p-6 relative overflow-hidden">
+            <h2 class="text-xs font-scifi text-slate-400 mb-6 tracking-widest uppercase border-b border-slate-700 pb-2">Tiến trình các đội</h2>
+            <div id="progress-container" class="space-y-4">
+                <!-- Tiến trình HTML inject by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Màn hình Chiến thắng -->
+    <div id="screen-win" style="display: none;" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-4">
+        <div id="win-bg" class="absolute inset-0"></div>
+        <div id="win-box" class="relative z-10 text-center glass-panel p-12 rounded-3xl border-2 shadow-[0_0_60px_rgba(255,255,255,0.1)] animate-scale-in">
+            <i id="win-icon" class="fa-solid fa-trophy text-8xl mb-6 animate-bounce"></i>
+            <h2 class="text-2xl text-slate-300 mb-2 font-scifi tracking-widest">ĐỘI CHIẾN THẮNG:</h2>
+            <h3 id="win-name" class="text-6xl font-scifi mb-8 uppercase">TÊN ĐỘI</h3>
+            <button onclick="resetGame()" class="btn-scifi px-8 py-3 bg-slate-700 border border-slate-500 text-white rounded hover:bg-slate-600 font-scifi transition-colors">
+                THIẾT LẬP LẠI
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 35 CÂU HỎI VẬT LÝ 11 - ĐIỆN TRƯỜNG ĐỀU ---
+        const QUESTIONS = [
+            { id: 1, text: "Điện trường giữa hai bản phẳng nhiễm điện trái dấu đặt song song là gì?", options: ["Điện trường tĩnh", "Điện trường đều", "Điện trường biến thiên", "Từ trường đều"], correct: 1 },
+            { id: 2, text: "Công thức tính cường độ điện trường giữa hai bản phẳng đặt song song là?", options: ["E = U.d", "E = U/d", "E = d/U", "E = q.U"], correct: 1 },
+            { id: 3, text: "Đơn vị của cường độ điện trường E là gì?", options: ["Vôn (V)", "Joule (J)", "Vôn trên mét (V/m)", "Niutơn (N)"], correct: 2 },
+            { id: 4, text: "Biểu thức độ lớn gia tốc của điện tích q, khối lượng m trong điện trường đều E là?", options: ["a = |q|E / m", "a = mE / |q|", "a = |q|m / E", "a = U / (m.d)"], correct: 0 },
+            { id: 5, text: "Lực điện tác dụng lên điện tích q đặt trong điện trường E có biểu thức vectơ là?", options: ["F = q.U", "F = q.E", "F = E/q", "F = q/(E.d)"], correct: 1 },
+            { id: 6, text: "Đặc điểm các đường sức của điện trường đều là gì?", options: ["Là các đường cong kín", "Là các đường thẳng song song, cách đều nhau", "Xuất phát từ cực âm, tận cùng ở cực dương", "Giao nhau tại trung điểm"], correct: 1 },
+            { id: 7, text: "Nếu lực điện cùng chiều vận tốc ban đầu, điện tích sẽ chuyển động như thế nào?", options: ["Tròn đều", "Thẳng đều", "Thẳng chậm dần đều", "Thẳng nhanh dần đều"], correct: 3 },
+            { id: 8, text: "Một hạt mang điện dương chuyển động dọc theo chiều đường sức điện trường. Chuyển động của hạt là?", options: ["Nhanh dần đều", "Chậm dần đều", "Đứng yên", "Tròn đều"], correct: 0 },
+            { id: 9, text: "Một electron (q < 0) bay vào điện trường đều dọc theo chiều đường sức. Vận tốc của nó sẽ?", options: ["Tăng dần", "Giảm dần", "Không đổi", "Đổi hướng 90 độ"], correct: 1 },
+            { id: 10, text: "Lực điện tác dụng lên electron (q < 0) có hướng như thế nào so với điện trường E?", options: ["Cùng hướng", "Ngược hướng", "Vuông góc", "Tạo một góc 45 độ"], correct: 1 },
+            { id: 11, text: "Một điện tích bay vào điện trường đều với vận tốc ban đầu vuông góc với các đường sức. Quỹ đạo của nó là?", options: ["Đường thẳng", "Đường tròn", "Một nhánh parabol", "Đường elip"], correct: 2 },
+            { id: 12, text: "Theo phương vuông góc với đường sức điện, điện tích chuyển động như thế nào? (Bỏ qua trọng lực)", options: ["Nhanh dần đều", "Thẳng đều", "Chậm dần đều", "Dao động điều hòa"], correct: 1 },
+            { id: 13, text: "Hai bản kim loại phẳng song song cách nhau 10cm. Hiệu điện thế giữa hai bản là 500V. Cường độ điện trường là?", options: ["5000 V/m", "50 V/m", "50000 V/m", "5 V/m"], correct: 0 },
+            { id: 14, text: "Một điện tích q = 2 μC chịu tác dụng của lực điện F = 0,01 N. Cường độ điện trường E có độ lớn là?", options: ["5000 V/m", "200 V/m", "50 V/m", "0,02 V/m"], correct: 0 },
+            { id: 15, text: "Khoảng cách d = 5 cm, E = 4000 V/m. Hiệu điện thế là?", options: ["20000 V", "200 V", "800 V", "80 V"], correct: 1 },
+            { id: 16, text: "Một electron (q = -1,6.10^-19 C) đặt trong điện trường đều E = 1000 V/m. Độ lớn lực điện tác dụng là?", options: ["1,6.10^-22 N", "1,6.10^-16 N", "1,6.10^-19 N", "1000 N"], correct: 1 },
+            { id: 17, text: "Một ion dương bay dọc theo hướng từ bản dương sang bản âm của điện trường đều. Động năng của ion sẽ?", options: ["Giảm dần", "Tăng dần", "Không đổi", "Bằng 0"], correct: 1 },
+            { id: 18, text: "Chọn câu SAI khi nói về điện trường đều:", options: ["Vectơ cường độ điện trường tại mọi điểm là như nhau", "Các đường sức song song cách đều", "Cường độ điện trường giảm dần theo khoảng cách", "Ví dụ: điện trường giữa 2 bản kim loại phẳng"], correct: 2 },
+            { id: 19, text: "Quãng đường S mà điện tích di chuyển từ trạng thái nghỉ dọc theo đường sức trong thời gian t là?", options: ["S = v0.t", "S = (1/2)a.t^2", "S = a.t", "S = U.d.t"], correct: 1 },
+            { id: 20, text: "Electron chuyển động ngược chiều đường sức điện trường. Động năng của electron sẽ?", options: ["Tăng dần", "Giảm dần", "Không đổi", "Biến thiên điều hòa"], correct: 0 },
+            { id: 21, text: "Khác biệt cơ bản giữa điện thế và điện thế năng là gì?", options: ["Điện thế phụ thuộc q, thế năng không phụ thuộc q", "Điện thế là đặc trưng của điện trường, thế năng là năng lượng của hệ (q và E)", "Cả hai là một", "Điện thế có đơn vị J, thế năng đơn vị V"], correct: 1 },
+            { id: 22, text: "Vì sao nói điện thế đặc trưng cho điện trường về phương diện tạo ra thế năng?", options: ["Vì V = W/q, nó cho biết thế năng của 1 đơn vị điện tích", "Vì điện thế sinh ra lực", "Vì điện thế tạo ra dòng điện", "Vì điện thế làm nóng dây dẫn"], correct: 0 },
+            { id: 23, text: "Vectơ cường độ điện trường hướng theo chiều nào của điện thế?", options: ["Chiều tăng của điện thế", "Chiều giảm của điện thế", "Vuông góc với điện thế", "Không có quy luật"], correct: 1 },
+            { id: 24, text: "Ý nghĩa của câu 'Điện thế tại M là 1V'?", options: ["Điện trường tại M tác dụng lực 1N", "Thế năng của điện tích 1C đặt tại M là 1J", "Cần 1J để mang điện tích từ M ra vô cực", "Tại M có 1 electron"], correct: 1 },
+            { id: 25, text: "Khi điện tích q > 0 dịch chuyển dọc theo chiều đường sức điện, điện thế thay đổi thế nào?", options: ["Tăng lên", "Không đổi", "Giảm xuống", "Bằng 0"], correct: 2 },
+            { id: 26, text: "Tại sao điện thế có thể âm?", options: ["Do điện trường yếu", "Do công di chuyển điện tích từ M ra mốc cản trở chuyển động", "Do chọn q âm", "Do cường độ điện trường âm"], correct: 1 },
+            { id: 27, text: "So sánh điện thế do điện tích +Q và -Q gây ra tại cùng khoảng cách r?", options: ["Bằng nhau", "Của +Q là dương, của -Q là âm", "Của -Q lớn hơn", "Đều bằng 0"], correct: 1 },
+            { id: 28, text: "Điện thế do một điện tích điểm gây ra phụ thuộc vào khoảng cách r như thế nào?", options: ["Tỉ lệ thuận với r", "Tỉ lệ nghịch với r", "Tỉ lệ nghịch với r bình phương", "Không phụ thuộc"], correct: 1 },
+            { id: 29, text: "Vì sao điện thế là đại lượng vô hướng?", options: ["Vì nó được định nghĩa qua công (A) và điện tích (q) đều là vô hướng", "Vì nó không chuyển động", "Vì nó có thể âm", "Vì nó phụ thuộc vào khoảng cách"], correct: 0 },
+            { id: 30, text: "Điện thế có phụ thuộc vào môi trường (hằng số điện môi) không?", options: ["Không", "Có, tỉ lệ thuận", "Có, tỉ lệ nghịch với hằng số điện môi", "Chỉ phụ thuộc trong chân không"], correct: 2 },
+            { id: 31, text: "Giải thích hiện tượng chim đậu trên một dây điện cao thế không bị giật?", options: ["Chân chim cách điện rất tốt", "Chim có điện trở cực lớn", "Hai chân chim đặt trên cùng 1 dây nên hiệu điện thế (chênh lệch điện thế) bằng 0", "Dòng điện không đi qua vật sống"], correct: 2 },
+            { id: 32, text: "Trong mô hình cột thu lôi, tại sao đầu kim phải nhọn?", options: ["Để dễ đâm xuyên qua không khí", "Tại mũi nhọn, mật độ điện tích lớn, điện thế rất cao làm ion hóa không khí dễ dàng dẫn sét", "Để chim không đậu vào", "Để giảm khối lượng cột"], correct: 1 },
+            { id: 33, text: "Sự nguy hiểm của 'điện áp bước' khi có dây điện cao thế rơi xuống đất là do đâu?", options: ["Do dòng điện chạy từ mặt đất lên không khí", "Do chân trước và chân sau ở hai vòng đẳng thế khác nhau tạo ra hiệu điện thế chạy qua người", "Do nhiệt độ của dây điện quá cao", "Do từ trường xung quanh dây quá mạnh"], correct: 1 },
+            { id: 34, text: "Để an toàn điện trong gia đình, các vỏ máy giặt, tủ lạnh thường được nối đất. Mục đích là gì?", options: ["Làm tăng tuổi thọ máy", "Cân bằng điện thế vỏ máy với đất (V=0), tránh giật khi có rò điện", "Tiết kiệm điện năng", "Giảm nhiễu sóng vô tuyến"], correct: 1 },
+            { id: 35, text: "Trong máy gia tốc hạt, người ta dùng hiệu điện thế hàng triệu Vôn để làm gì?", options: ["Tạo ra điện trường cực mạnh sinh công lớn làm tăng động năng hạt đến vận tốc rất cao", "Làm nóng các hạt", "Tạo ra ánh sáng chớp", "Tăng khối lượng của hạt"], correct: 0 }
+        ];
+
+        // --- CẤU HÌNH MA TRẬN 15x15 BÀN CỜ ---
+        const WINNING_SCORE = 57; // 51 vòng ngoài + 6 bước vào tâm
+        const PERIMETER = [
+            {x:1, y:6}, {x:2, y:6}, {x:3, y:6}, {x:4, y:6}, {x:5, y:6},
+            {x:6, y:5}, {x:6, y:4}, {x:6, y:3}, {x:6, y:2}, {x:6, y:1}, {x:6, y:0},
+            {x:7, y:0}, {x:8, y:0},
+            {x:8, y:1}, {x:8, y:2}, {x:8, y:3}, {x:8, y:4}, {x:8, y:5},
+            {x:9, y:6}, {x:10, y:6}, {x:11, y:6}, {x:12, y:6}, {x:13, y:6}, {x:14, y:6},
+            {x:14, y:7}, {x:14, y:8},
+            {x:13, y:8}, {x:12, y:8}, {x:11, y:8}, {x:10, y:8}, {x:9, y:8},
+            {x:8, y:9}, {x:8, y:10}, {x:8, y:11}, {x:8, y:12}, {x:8, y:13}, {x:8, y:14},
+            {x:7, y:14}, {x:6, y:14},
+            {x:6, y:13}, {x:6, y:12}, {x:6, y:11}, {x:6, y:10}, {x:6, y:9},
+            {x:5, y:8}, {x:4, y:8}, {x:3, y:8}, {x:2, y:8}, {x:1, y:8}, {x:0, y:8},
+            {x:0, y:7}, {x:0, y:6}
+        ];
+
+        // Tính quỹ đạo cho 4 đội
+        const getTeamPath = (teamId) => {
+            const startIndexes = [0, 13, 26, 39]; 
+            let path = [];
+            let start = startIndexes[teamId];
+            for(let i = 0; i < 51; i++) {
+                path.push(PERIMETER[(start + i) % 52]);
+            }
+            // 6 bước về đích
+            if(teamId === 0) path.push({x:1, y:7}, {x:2, y:7}, {x:3, y:7}, {x:4, y:7}, {x:5, y:7}, {x:6, y:7});
+            if(teamId === 1) path.push({x:7, y:1}, {x:7, y:2}, {x:7, y:3}, {x:7, y:4}, {x:7, y:5}, {x:7, y:6});
+            if(teamId === 2) path.push({x:13, y:7}, {x:12, y:7}, {x:11, y:7}, {x:10, y:7}, {x:9, y:7}, {x:8, y:7});
+            if(teamId === 3) path.push({x:7, y:13}, {x:7, y:12}, {x:7, y:11}, {x:7, y:10}, {x:7, y:9}, {x:7, y:8});
+            return path;
+        };
+        const TEAM_PATHS = [getTeamPath(0), getTeamPath(1), getTeamPath(2), getTeamPath(3)];
+
+        // Các đội chơi
+        const PLAYERS = [
+            { id: 0, name: "Đội Electron", classTeam: "cyan", color: "text-cyan-400", bg: "bg-cyan-500", icon: "fa-atom", border: "border-cyan-400", shadow: "shadow-[0_0_15px_rgba(34,211,238,0.8)]", pos: 0 },
+            { id: 1, name: "Đội Proton", classTeam: "rose", color: "text-rose-400", bg: "bg-rose-500", icon: "fa-circle-plus", border: "border-rose-400", shadow: "shadow-[0_0_15px_rgba(244,63,94,0.8)]", pos: 0 },
+            { id: 2, name: "Đội Photon", classTeam: "amber", color: "text-amber-400", bg: "bg-amber-400", icon: "fa-sun", border: "border-amber-400", shadow: "shadow-[0_0_15px_rgba(251,191,36,0.8)]", pos: 0 },
+            { id: 3, name: "Đội Ion", classTeam: "violet", color: "text-violet-400", bg: "bg-violet-500", icon: "fa-magnet", border: "border-violet-400", shadow: "shadow-[0_0_15px_rgba(139,92,246,0.8)]", pos: 0 }
+        ];
+
+        // --- TRẠNG THÁI GAME ---
+        let currentTurn = 0;
+        let isRolling = false;
+        let activeQuestion = null;
+        let timer = 20;
+        let timerInterval = null;
+
+        // BẮT ĐẦU GAME
+        function startGame() {
+            document.getElementById('screen-start').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('screen-start').style.display = 'none';
+                const game = document.getElementById('screen-game');
+                game.style.display = 'flex';
+                setTimeout(() => game.style.opacity = '1', 50);
+                
+                initBoard();
+                updateTokens();
+                updateUI();
+            }, 500);
+        }
+
+        // VẼ BÀN CỜ HTML THUẦN
+        function initBoard() {
+            const layer = document.getElementById('cells-layer');
+            layer.innerHTML = '';
+            
+            for (let y = 0; y < 15; y++) {
+                for (let x = 0; x < 15; x++) {
+                    let inPerim = PERIMETER.some(p => p.x === x && p.y === y);
+                    
+                    let isStartCyan = (x===1 && y===6), isStartRose = (x===8 && y===1);
+                    let isStartAmber = (x===13 && y===8), isStartViolet = (x===6 && y===13);
+                    
+                    let isHomeCyan = (y===7 && x>=1 && x<=5), isHomeRose = (x===7 && y>=1 && y<=5);
+                    let isHomeAmber = (y===7 && x>=9 && x<=13), isHomeViolet = (x===7 && y>=9 && y<=13);
+
+                    if (inPerim || isHomeCyan || isHomeRose || isHomeAmber || isHomeViolet) {
+                        let cell = document.createElement('div');
+                        cell.style.position = 'absolute';
+                        cell.style.width = '6.4%';
+                        cell.style.height = '6.4%';
+                        cell.style.left = `${(x + 0.5) * (100/15)}%`;
+                        cell.style.top = `${(y + 0.5) * (100/15)}%`;
+                        cell.style.transform = 'translate(-50%, -50%)';
+
+                        let inner = document.createElement('div');
+                        
+                        if(isStartCyan) { inner.className = "board-cell cell-cyan"; inner.innerHTML = `<i class="fa-solid fa-angles-right"></i>`; }
+                        else if(isStartRose) { inner.className = "board-cell cell-rose"; inner.innerHTML = `<i class="fa-solid fa-angles-down"></i>`; }
+                        else if(isStartAmber) { inner.className = "board-cell cell-amber"; inner.innerHTML = `<i class="fa-solid fa-angles-left"></i>`; }
+                        else if(isStartViolet) { inner.className = "board-cell cell-violet"; inner.innerHTML = `<i class="fa-solid fa-angles-up"></i>`; }
+                        else if(isHomeCyan) { inner.className = "board-cell home-cyan font-scifi"; inner.innerHTML = x; }
+                        else if(isHomeRose) { inner.className = "board-cell home-rose font-scifi"; inner.innerHTML = y; }
+                        else if(isHomeAmber) { inner.className = "board-cell home-amber font-scifi"; inner.innerHTML = 14-x; }
+                        else if(isHomeViolet) { inner.className = "board-cell home-violet font-scifi"; inner.innerHTML = 14-y; }
+                        else { inner.className = "board-cell"; inner.innerHTML = ""; }
+                        
+                        inner.style.width = '100%';
+                        inner.style.height = '100%';
+                        
+                        cell.appendChild(inner);
+                        layer.appendChild(cell);
+                    }
+                }
+            }
+        }
+
+        // TỌA ĐỘ QUÂN CỜ
+        function getCoords(teamId, pos) {
+            if (pos === 0) {
+                const base = [ {x: 2.5, y: 2.5}, {x: 12.5, y: 2.5}, {x: 12.5, y: 12.5}, {x: 2.5, y: 12.5} ];
+                return base[teamId];
+            }
+            return TEAM_PATHS[teamId][pos - 1];
+        }
+
+        // VẼ QUÂN CỜ
+        function updateTokens() {
+            const layer = document.getElementById('tokens-layer');
+            layer.innerHTML = '';
+            
+            PLAYERS.forEach((p, idx) => {
+                const coords = getCoords(idx, p.pos);
+                // Tránh đè lên nhau
+                const overlaps = PLAYERS.filter(other => other.pos > 0 && other.pos === p.pos && other.id !== p.id && getCoords(other.id, other.pos).x === coords.x && getCoords(other.id, other.pos).y === coords.y);
+                const offset = overlaps.length > 0 ? (idx % 2 === 0 ? -12 : 12) : 0;
+                
+                const isTurn = (idx === currentTurn && !isRolling);
+
+                const token = document.createElement('div');
+                token.className = `token-piece token-${p.classTeam} ${isTurn ? 'active-player-ring' : ''}`;
+                token.style.left = `calc(${(coords.x + 0.5) * (100/15)}% + ${offset}px)`;
+                token.style.top = `calc(${(coords.y + 0.5) * (100/15)}% + ${offset}px)`;
+                
+                token.innerHTML = `<i class="fa-solid ${p.icon}"></i>`;
+                layer.appendChild(token);
+            });
+        }
+
+        // CẬP NHẬT GIAO DIỆN
+        function updateUI() {
+            const p = PLAYERS[currentTurn];
+            
+            document.getElementById('current-turn-box').className = `text-xl font-bold p-4 rounded-xl border ${p.border} bg-slate-900/80 flex items-center gap-4 ${p.shadow} transition-all`;
+            document.getElementById('current-turn-icon').className = `w-12 h-12 rounded-full flex items-center justify-center text-white text-2xl transition-all ${p.bg}`;
+            document.getElementById('current-turn-icon').innerHTML = `<i class="fa-solid ${p.icon}"></i>`;
+            document.getElementById('current-turn-name').className = p.color;
+            document.getElementById('current-turn-name').innerText = p.name;
+            document.getElementById('dice-value').className = `text-6xl font-scifi z-10 drop-shadow-[0_0_10px_currentColor] ${p.color}`;
+
+            // Tiến trình
+            let html = '';
+            PLAYERS.forEach(pl => {
+                html += `
+                <div class="relative">
+                    <div class="flex justify-between items-center mb-1 text-xs font-bold">
+                        <span class="${pl.color} uppercase"><i class="fa-solid ${pl.icon} mr-1"></i> ${pl.name}</span>
+                        <span class="text-slate-400 font-mono">${pl.pos}/${WINNING_SCORE}</span>
+                    </div>
+                    <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                        <div class="h-full ${pl.bg} transition-all duration-500" style="width: ${(pl.pos / WINNING_SCORE) * 100}%; box-shadow: 0 0 10px currentColor"></div>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('progress-container').innerHTML = html;
+            updateTokens();
+        }
+
+        function addLog(msg) {
+            const logBox = document.getElementById('log-container');
+            for(let i=0; i<logBox.children.length; i++) {
+                logBox.children[i].className = "p-2 rounded border-l-2 bg-transparent border-slate-700 text-slate-500";
+            }
+            const newLog = document.createElement('div');
+            newLog.className = "p-2 rounded border-l-2 bg-slate-800 border-cyan-400 text-slate-200";
+            newLog.innerText = `> ${msg}`;
+            logBox.insertBefore(newLog, logBox.firstChild);
+            if(logBox.children.length > 6) logBox.removeChild(logBox.lastChild);
+        }
+
+        // TUNG XÚC XẮC
+        function rollDice() {
+            if(isRolling) return;
+            isRolling = true;
+            
+            document.getElementById('btn-roll').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btn-roll').innerText = 'ĐANG TẠO SỐ...';
+            document.getElementById('dice-container').classList.add('dice-spin');
+            document.getElementById('dice-value').classList.add('text-slate-600');
+            
+            let ticks = 0;
+            let finalDice = 1;
+            const iv = setInterval(() => {
+                finalDice = Math.floor(Math.random() * 6) + 1;
+                document.getElementById('dice-value').innerText = finalDice;
+                ticks++;
+                if(ticks > 15) {
+                    clearInterval(iv);
+                    document.getElementById('dice-container').classList.remove('dice-spin');
+                    document.getElementById('dice-value').classList.remove('text-slate-600');
+                    setTimeout(() => askQuestion(finalDice), 800);
+                }
+            }, 80);
+        }
+
+        // HIỆN CÂU HỎI
+        function askQuestion(steps) {
+            const q = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
+            activeQuestion = { ...q, steps: steps };
+            
+            document.getElementById('modal-mission').innerText = `NHIỆM VỤ: TIẾN ${steps} Ô`;
+            document.getElementById('modal-question-text').innerText = q.text;
+            
+            const optionsBox = document.getElementById('modal-options');
+            optionsBox.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "p-4 bg-slate-800/80 hover:bg-cyan-900/50 border border-slate-600 rounded-lg text-left text-slate-200 font-semibold transition-all hover:border-cyan-400 flex items-center group";
+                btn.onclick = () => answerQuestion(idx);
+                btn.innerHTML = `<span class="inline-block w-8 h-8 bg-slate-900 border border-slate-700 rounded text-center leading-8 mr-3 text-cyan-400 font-scifi group-hover:bg-cyan-500 group-hover:text-black shrink-0 transition-colors">${String.fromCharCode(65+idx)}</span> <span>${opt}</span>`;
+                optionsBox.appendChild(btn);
+            });
+
+            document.getElementById('question-modal').style.display = 'flex';
+            
+            timer = 20;
+            document.getElementById('modal-timer').innerText = timer + 's';
+            document.getElementById('timer-bar').style.width = '100%';
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timer -= 0.1;
+                if(timer < 0) timer = 0;
+                document.getElementById('timer-bar').style.width = `${(timer/20)*100}%`;
+                document.getElementById('modal-timer').innerText = Math.ceil(timer) + 's';
+                
+                if(timer <= 5) document.getElementById('modal-timer').classList.add('text-red-500', 'animate-pulse');
+                else document.getElementById('modal-timer').classList.remove('text-red-500', 'animate-pulse');
+
+                if(timer <= 0) {
+                    clearInterval(timerInterval);
+                    answerQuestion(-1);
+                }
+            }, 100);
+        }
+
+        function answerQuestion(idx) {
+            clearInterval(timerInterval);
+            document.getElementById('question-modal').style.display = 'none';
+            
+            const p = PLAYERS[currentTurn];
+            if(idx === activeQuestion.correct) {
+                addLog(`✔️ Phân tích chính xác! ${p.name} dịch chuyển ${activeQuestion.steps} ô.`);
+                moveToken(activeQuestion.steps);
+            } else {
+                addLog(`⚠️ Lỗi hệ thống/Quá giờ! ${p.name} đứng yên tại chỗ.`);
+                setTimeout(nextTurn, 1500);
+            }
+        }
+
+        // DI CHUYỂN
+        function moveToken(steps) {
+            let p = PLAYERS[currentTurn];
+            let target = p.pos + steps;
+            if (target > WINNING_SCORE) target = WINNING_SCORE;
+
+            const stepMove = () => {
+                if (p.pos < target) {
+                    p.pos++;
+                    updateTokens();
+                    updateUI();
+                    setTimeout(stepMove, 250);
+                } else {
+                    if (p.pos === WINNING_SCORE) setTimeout(showWin, 1000);
+                    else setTimeout(nextTurn, 500);
+                }
+            }
+            stepMove();
+        }
+
+        function nextTurn() {
+            currentTurn = (currentTurn + 1) % 4;
+            isRolling = false;
+            document.getElementById('btn-roll').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btn-roll').innerText = 'KÍCH HOẠT';
+            document.getElementById('dice-value').innerText = '?';
+            updateUI();
+        }
+
+        function showWin() {
+            const p = PLAYERS[currentTurn];
+            document.getElementById('screen-game').style.display = 'none';
+            document.getElementById('screen-win').style.display = 'flex';
+            
+            document.getElementById('win-bg').className = `absolute inset-0 bg-[radial-gradient(circle_at_center,${p.color.replace('text-','rgba(').replace('400','0.2)')},transparent)]`;
+            document.getElementById('win-box').className = `relative z-10 text-center glass-panel p-12 rounded-3xl border-2 ${p.border} shadow-[0_0_60px_rgba(255,255,255,0.1)] animate-scale-in`;
+            document.getElementById('win-icon').className = `fa-solid fa-trophy text-8xl mb-6 ${p.color} drop-shadow-[0_0_20px_currentColor] animate-bounce`;
+            document.getElementById('win-name').className = `text-6xl font-scifi mb-8 uppercase ${p.color} drop-shadow-[0_0_15px_currentColor]`;
+            document.getElementById('win-name').innerText = p.name;
+        }
+
+        function resetGame() {
+            PLAYERS.forEach(p => p.pos = 0);
+            currentTurn = 0;
+            isRolling = false;
+            
+            document.getElementById('screen-win').style.display = 'none';
+            document.getElementById('screen-game').style.display = 'flex';
+            
+            document.getElementById('btn-roll').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btn-roll').innerText = 'KÍCH HOẠT';
+            document.getElementById('dice-value').innerText = '?';
+            
+            addLog("Hệ thống tái khởi động. Các đội đã sẵn sàng!");
+            updateTokens();
+            updateUI();
+        }
+    </script>
+</body>
+</html>
